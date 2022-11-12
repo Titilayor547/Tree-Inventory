@@ -1,0 +1,577 @@
+---
+title: "PracticePro"
+author: "Tee"
+date: "3/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+#Load packages
+library(readr)
+library(vtable)
+library(tidyr)
+library(plyr)
+library(maditr)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(Rcpp)
+library(knitr)
+library(psych)
+
+pathway <- "C:\\Users\\tttajude\\MasterProject\\NC"
+
+#import the excel file for Plot
+setwd(pathway)
+Plot <-read.csv(paste(pathway, "\\NC_PLOT.csv",sep=""), header=TRUE)
+
+#View the first line in the data to check import
+Plot[1,]
+```
+
+```{r}
+library(dplyr)
+#Plot %>% 
+Plot1 <- subset(Plot, select = c(INVYR, COUNTYCD, PLOT, LAT, LON))
+Plot2 <- subset(Plot1, COUNTYCD == "163")
+#Plot2 <- na.omit(Plot11)
+Plot2
+```
+
+#Import the excel file for Trees
+```{r}
+Tree <-read.csv(paste(pathway, "\\NC_TREE.csv",sep=""), header=TRUE)
+Tree[1,]
+```
+
+
+```{r}
+Tree1 <- subset(Tree, select = c(INVYR, COUNTYCD, TREE, STATUSCD, DIA, HT, VOLCFNET, VOLCFGRS))
+Tree11 <- subset(Tree1, COUNTYCD == "163", na.rm = TRUE,)
+Tree2 <- na.omit(Tree11)
+Tree2
+```
+
+#Import the excel file for COND
+```{r}
+Condd <-read.csv(paste(pathway, "\\NC_COND.csv",sep=""), header=TRUE)
+Condd [1,]
+```
+
+
+```{r}
+Condd1 <- subset(Condd, select = c(INVYR, COUNTYCD, PLOT, FORTYPCD, STDAGE, SLOPE))
+Condd11 <- subset(Condd1, COUNTYCD == "163")
+Condd2 <- na.omit(Condd11)
+Condd2
+```
+
+#Bind all tables together
+```{r}
+df1 <- Plot2 %>% left_join(Tree2)
+df2 <- df1 %>% left_join(Condd2)
+dff <- df1 %>% full_join(df2)
+dff
+```
+
+#Create a subset for only bald crypress (a) 607 = Baldcypress / water tupelo and (b) 609 = Baldcypress / pondcypress
+```{r}
+Cypress <- subset(dff, FORTYPCD == 609)
+Cypress
+```
+```{r}
+library(writexl)
+library(openxlsx)
+write_xlsx(Cypress, 'export_a_dataframe_to_excel.xlsx')
+```
+
+
+```{r}
+Bladen <-read_excel(paste(pathway, "\\2BladenCounty1.xlsx",sep=""), sheet="Sheet1")
+Bladen[1,]
+
+Pender <-read_excel(paste(pathway, "\\3PenderCounty1.xlsx",sep=""), sheet="Sheet1")
+Pender[1,]
+```
+
+
+```{r}
+FullCypress <- rbind(Pender, Cypress, Bladen)
+FullCypress
+
+library(writexl)
+library(openxlsx)
+write_xlsx(FullCypress, 'export_a_dataframe_to_excel.xlsx')
+```
+
+```{r}
+Cypress1 <- subset(FullCypress, select = c(INVYR, COUNTYCD, PLOT, STATUSCD, DIA, HT, FORTYPCD, STDAGE, SLOPE, VOLCFNET, VOLCFGRS))
+Cypress1
+Cypress2 <- subset(Cypress1,Cypress1$INVYR>2009 & Cypress1$DIA>=4)
+Cypress2
+describe(Cypress2)
+```
+
+```{r}
+Cypressx <- subset(FullCypress,FullCypress$INVYR>2009 & FullCypress$DIA>=4)
+Cypress5 <- subset(Cypressx, select = c(COUNTYCD, PLOT, LAT, LON))
+distinct(Cypress5, .keep_all = TRUE)
+```
+
+Visualize the distribution of Bald Cypress/Water tupelo alone.
+```{r}
+#creating a subset for all loblolly pine from the entire datasets(FIA)
+Cypress3 <- subset(Cypress2, FORTYPCD == "607")
+
+
+#create an histogram graph
+hist(Cypress3$DIA, breaks = 16, main ="Histogram of Loblolly Pine", xlab="DBH (inches)")
+
+m = mean(Cypress3$DIA, na.rm = TRUE,) # to determine the mean
+std <- sqrt(var(Cypress3$DIA, na.rm = TRUE,)) # to determine the standard deviation
+
+#create an histogram graph
+hist (Cypress3$DIA, freq=FALSE, main ="Histogram of Bald Cypress/Water tupelo", xlab="DBH (inches)")
+
+#Add a normal distribution line
+curve(dnorm(x, mean = m, sd = std), add = TRUE)
+
+#putting a vertical (v) line on the histogram graph to indicate the mean and the median
+abline(v = mean(Cypress3$DIA,na.rm = TRUE), col = 'red', lwd = 2)
+abline(v = median(Cypress3$DIA,na.rm = TRUE), col = 'blue', lwd = 3)
+
+#creating a legend
+legend(x = 'topright', c('mean', 'median'), col = c('red', 'blue'), lwd = c(2, 3))
+```
+
+
+Visualize the distribution of Bald Cypress/pondcypress alone.
+```{r}
+#creating a subset for all loblolly pine from the entire datasets(FIA)
+Cypress4 <- subset(Cypress2, FORTYPCD == "609" & STATUSCD == 1)
+
+
+#create an histogram graph
+hist(Cypress4$DIA, breaks = 10, main ="Histogram of Loblolly Pine", xlab="DBH (inches)")
+
+m = mean(Cypress4$DIA, na.rm = TRUE,) # to determine the mean
+std <- sqrt(var(Cypress4$DIA, na.rm = TRUE,)) # to determine the standard deviation
+
+#create an histogram graph
+hist (Cypress4$DIA, freq=FALSE, main ="Histogram of Bald Cypress/pondcypress", xlab="DBH (inches)")
+
+#Add a normal distribution line
+curve(dnorm(x, mean = m, sd = std), add = TRUE)
+
+#putting a vertical (v) line on the histogram graph to indicate the mean and the median
+abline(v = mean(Cypress4$DIA,na.rm = TRUE), col = 'red', lwd = 2)
+abline(v = median(Cypress4$DIA,na.rm = TRUE), col = 'blue', lwd = 3)
+
+#creating a legend
+legend(x = 'topleft', c('mean', 'median'), col = c('red', 'blue'), lwd = c(2, 3))
+```
+
+Visualize the distribution of all Bald Cypress
+```{r}
+b = seq(0,31.2,by=2)
+
+hist <- hist(Cypress2$DIA, breaks = 15, main ="Histogram Distribution of All Bald Cypress Trees", xlab="DBH (inches)")
+
+#creating a subset for all loblolly pine from the entire datasets (FIA)
+multiplier <- hist$counts / hist$density
+mydensity <- density(Cypress2$DIA)
+mydensity$y <- mydensity$y * multiplier[1]
+
+#create an histogram graph
+hist(Cypress2$DIA, breaks = 16, main ="Histogram of Diameter Distribution of All Bald Cypress Trees", xlab="DBH (inches)")
+
+#putting a vertical (v) line on the histogram graph to indicate the mean and the median
+abline(v = mean(Cypress2$DIA,na.rm = TRUE), col = 'red', lwd = 2)
+MeanLabel<-paste("Mean= ", round(mean(Cypress2$DIA),1),sep="")
+text(30, 550, MeanLabel, col="red")
+
+abline(v = median(Cypress2$DIA,na.rm = TRUE), col = 'blue', lwd = 3)
+MedianLabel<- paste("Median= ", round(median(Cypress2$DIA),1),sep="") 
+text(30, 600, MedianLabel,col="blue")
+
+lines(mydensity)
+```
+
+
+```{r}
+m = mean(Cypress2$DIA, na.rm = TRUE,) # to determine the mean
+std <- sqrt(var(Cypress2$DIA, na.rm = TRUE,)) # to determine the standard deviation
+
+#create an histogram graph
+hist (Cypress2$DIA, freq=FALSE, main ="Histogram of Diameter Distribution of All Bald Cypress Trees", xlab="DBH (inches)")
+
+#Add a normal distribution line
+curve(dnorm(x, mean = m, sd = std), add = TRUE)
+
+#putting a vertical (v) line on the histogram graph to indicate the mean and the median
+abline(v = mean(Cypress2$DIA,na.rm = TRUE), col = 'red', lwd = 2)
+MeanLabel<-paste("Mean= ", round(mean(Cypress2$DIA),1),sep="")
+text(12.5, 800, MeanLabel, col="red")
+
+abline(v = median(Cypress2$DIA,na.rm = TRUE), col = 'blue', lwd = 3)
+MedianLabel<- paste("Median= ", round(median(Cypress2$DIA),1),sep="") 
+text(12.5,700, MedianLabel,col="blue")
+
+
+#creating a legend
+legend(x = 'topright', c('mean', 'median'), col = c('red', 'blue'), lwd = c(2, 3))
+```
+
+Linear Relationship
+```{r}
+#creating a subset for all trees with diameter greater than 4 from the entire data set
+AllTree1 <- subset(Cypress2, DIA >= 4 & STATUSCD == 1)
+
+#creating a subset for all trees with diameter greater than 4 from the entire data set
+AllTree2 <- subset(AllTree1, FORTYPCD == "607")
+
+
+#create simple plots
+AllTree1$FORTYPCD = ifelse(AllTree1$FORTYPCD == "609", "Water Tupelo", "pondcypress")
+ggplot(AllTree1, aes (x = DIA, y = HT, colour = FORTYPCD)) + geom_point() + geom_smooth (method = "lm", se = FALSE, lwd=1) + labs (title = "Scatterred plot of Trees with Diameter greater than four Inches", x = "Diameter (Inches)", y = "Total Height (Feet)")
+```
+
+```{r}
+AllTree1$Types = ifelse(AllTree1$FORTYPCD == "609", "Water Tupelo", "pondcypress")
+
+#In order to use the dataframe functionality for ggplot, convert to a data frame.
+AllTREE2D<-as.data.frame(AllTree1)
+#indicates the data you wish to work with
+AllTREE2D %>%
+ggplot(aes(x=DIA, 
+ y=HT, 
+ color=Types))+
+ geom_point()+
+ geom_smooth(method="lm")+
+  labs (title = "Scatterred plot of Trees with Diameter greater than Four Inches", x = "Diameter (Inches)", y = "Total Height (Feet)")
+```
+
+```{r}
+AllTree1 = subset(Cypress2, DIA > 4)
+#In order to use the dataframe functionality for ggplot, convert to a data frame.
+AllTREE2D<-as.data.frame(AllTree1)
+#indicates the data you wish to work with
+AllTREE2D %>%
+ggplot(aes(x=HT, y=VOLCFGRS)) +
+  geom_point()+ 
+  geom_smooth(method="lm", color="black")+
+  labs (title = "Scatterred plot of Trees with Diameter greater than Four Inches", x = "Diameter (Inches)", y = "Total Height (Feet)")
+```
+
+Linear Relationship (Curvilinear)
+```{r}
+lw1 = loess(HT ~ DIA,data=AllTree1)
+plot(HT ~ DIA,data=AllTree1)
+xvalue<-order(AllTree1$DIA)
+lines(AllTree1$DIA[xvalue],lw1$fitted[xvalue],col="blue",lwd=3)
+
+cor(AllTree1$DIA,AllTree1$HT)
+```
+
+
+Calculate the confidence Interval of Height for all bald cypress trees that are alive with Diameter greater than or equals 4 inches
+
+Step 1: Calculate the mean
+```{r}
+AllTree1 <- subset(Cypress2, DIA >= 4 & STATUSCD == 1)
+data ("AllTree1")
+sample.mean <- mean (AllTree1$HT, na.rm = TRUE)
+print (sample.mean)
+```
+
+Step 2: Calculate the standard error of the mean
+```{r}
+#length() is used to determine the sample size
+sample.n <- length(AllTree1$HT)
+sample.sd <- sd(AllTree1$HT, na.rm = TRUE)             #sd to determine the standard deviation
+sample.se <- sample.sd/sqrt(sample.n)
+print(sample.se)
+```
+
+Step 3: Find the t-score that corresponds to the confidence level
+```{r}
+alpha = 0.05
+degrees.freedom = sample.n - 1
+t.score = qt (p=alpha/2, df= degrees.freedom, lower.tail = F)
+print(t.score)
+```
+
+Step 4: Calculate the margin of error
+```{r}
+margin.error <- t.score * sample.se
+```
+
+Step 5: Construct the confidence level
+```{r}
+lower.bound <- sample.mean - margin.error
+upper.bound <- sample.mean + margin.error
+print(c(lower.bound, upper.bound))
+```
+
+Calculate the average number of dead trees per plot
+```{r}
+i<-1
+plotno <- unique(Cypress2$PLOT)
+plotno
+
+counts <- dim(length(plotno))
+
+for (i in 1: length(plotno)){
+  sub <- subset(Cypress2, Cypress2$PLOT == plotno[i])
+  counts[i] <- length(subset(sub$STATUSCD, sub$STATUSCD == 1))
+}
+
+Dead <- counts/0.16
+Dead
+summary(Dead)
+```
+
+Calculate the average number of live trees per plot
+```{r}
+i<-1
+plotno <- unique(Cypress2$PLOT)
+plotno
+
+counts <- dim(length(plotno))
+
+for (i in 1: length(plotno)){
+  sub <- subset(Cypress2, Cypress2$PLOT == plotno[i])
+  counts[i] <- length(subset(sub$STATUSCD, sub$STATUSCD == 1))
+}
+counts
+```
+
+Check the correlation between Variables
+```{r}
+
+summary(Cypress2)
+
+pairs.panels(Cypress2, 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+             )
+```
+
+
+```{r}
+Linearreg<-lm(VOLCFGRS ~ DIA + HT, data=Cypress2)
+summary(Linearreg)
+```
+
+```{r}
+plot(Cypress2$DIA,Linearreg$residuals, ylab="Residuals", xlab="Length", main="Residual Plots") 
+abline(0, 0) 
+```
+
+
+```{r}
+#Test of normality for the final Model
+hist(Linearreg$residuals)
+
+qqnorm(Linearreg$residuals, main='QQ plot')
+qqline(Linearreg$residuals)
+
+shapiro.test(Linearreg$residuals)
+ks.test(Linearreg$residuals, 'pnorm')
+```
+
+
+```{r}
+dffit <- dffits(Linearreg)
+p<-length(Linearreg$coefficients)
+n<-length(dffit)
+cutoff<-2*((p+1)/n-p-1)
+influential3<-subset(dffit,dffit>cutoff)
+plot(influential3)
+
+sta <- rstandard(Linearreg)
+stu <- rstudent(Linearreg)
+influential2<-subset(stu,stu>3)
+plot(influential2)
+
+cook <- cooks.distance(Linearreg)
+influential4<-subset(cook,cook>0.5)
+plot(influential4)
+```
+
+Plot the transformed variables and compare it to the original variables.
+```{r}
+#create the transformed variables
+AllTree1$HTln<-log(AllTree1$HT)
+AllTree1$DBHln<-log(AllTree1$DIA)
+AllTree1$Volln<-log(AllTree1$VOLCFGRS)
+
+#plot to see what is happening
+plot(AllTree1$DBHln,AllTree1$HTln)
+```
+
+Linear regression for the transformed data 
+```{r}
+TransModel<-lm(Volln ~ DBHln + HTln, data=AllTree1)
+summary(TransModel)
+```
+
+```{r}
+plot(TransModel$residuals)
+abline(c(0,0),col="blue")
+```
+
+
+```{r}
+#Test of normality for the final Model
+hist(TransModel$residuals)
+
+qqnorm(TransModel$residuals, main='QQ plot')
+qqline(TransModel$residuals)
+
+shapiro.test(TransModel$residuals)
+ks.test(TransModel$residuals, 'pnorm')
+```
+
+This clearly looks like a better fit.  Let's run the regression.
+
+
+All other assessments of the model are the same as before.  This is the great thing about linear regression, the steps to assess the model fit are consistent.  
+
+
+An easier option is to use the predict function. The predict function allows you to enter in the X value for which you hope to find the average y value.  You can also use the interval argument to obtain the confidence interval and the predication interval for that value.  
+
+The confidence interval provides the level of uncertainty around the statistic you are looking at, say for example the mean value of Y for a given x.  The prediction interval provides the level of uncertainty around the next measured value of Y given x, which will be a wider interval than the confidence interval as there is no guarantee that the next measured value is equal to the mean.  
+
+```{r}
+confint(TransModel) # Using profile-likelihood to get CI
+confint.default(TransModel) # using standard errors to get CI
+```
+
+```{r}
+new<-data.frame(DBHln=c(log(12)), HTln=c(log(60)))
+predict(TransModel,new,interval="confidence")
+predict(TransModel,new,interval="prediction")
+```
+
+
+
+Note: The values do not represent the predicted Volume, but rather the predicted natural log of Volume.  What are the intervals for height?
+
+Backtransformation from Natural Log of Volume. 
+
+```{r}
+
+exp(predict(TransModel, new,interval="confidence"))
+exp(predict(TransModel, new,interval="prediction"))
+exp(cbind(OR = coef(TransModel), confint(TransModel)))
+```
+
+#Validation Statistics
+One thing you will see often in the literature are model validations.  This is when you use one data set to create a model (training data) and another separate data set to validate the model (validation data).  In effect, you are testing to see how well the model works using different data.  If you do not have access to a separate dataset, you may consider splitting your data.  Commonly, the data will be split into 2/3 which is used to develop the model and 1/3 that is used for validation.
+
+Let's look at how this works with the height/diameter models. 
+Data is split using a random procedure. Using the floor function you can set the percent of your data to work with.  
+67% for the training data.  
+The remaining 1/3 will be put into the test data.  
+
+```{r}
+## 75% of the sample size
+smp_size <- floor(0.67 * nrow(AllTree1))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(AllTree1)), size = smp_size)
+
+train <- AllTree1[train_ind, ]
+test <- AllTree1[-train_ind, ]
+```
+
+Use the train data to create the tranformed model we fit before.
+
+```{r}
+TransModelTrain<-lm(Volln ~ DBHln + HTln, data=train)
+summary(TransModelTrain)
+```
+
+We will assume that we went through the process of assessing the goodness of fit for this model.  Let's look at using the test data to validate the model.  
+
+
+1. Use the model to determine the predicted values for each measure in the test data.  Plot the actual versus the predicted values.
+2. Calculate the root mean squared error which measures the average prediction error made by the model when predicting the outcome for a future observation. Lower values of RMSE are better.
+3. Calculate the mean absolute error.  This is an alternative to RMSE that is less sensitive to outliers in your data. It corresponds to the average absolute difference between observed and predicted outcomes. Lower values of MAE are also better.  
+
+The ModelMetrics library has a rmse and a mae function in it that can be used for the calculations.
+
+```{r}
+library(ModelMetrics)
+library(boot)
+library(simpleboot)
+
+predicted<-predict(TransModelTrain,test)
+actual<-test$Volln
+
+#plot actual versus predicted values
+plot(actual,predicted)
+abline(c(0,1),col="blue")
+
+# Make predictions and compute RMSE and MAE
+rmse(actual, predicted)
+mae(actual, predicted)
+
+```
+Validation
+#Leaving one measure out  
+
+```{r}
+library(caret)
+# Set training control method as LOOCV
+train.control <- trainControl(method = "LOOCV")
+
+# Train the model
+LOOCV.model <- train(Volln ~ DBHln + HTln, 
+                     data = AllTree1, 
+                     method = "lm",
+                     trControl = train.control)
+
+# Display results
+LOOCV.model
+```
+
+And lastly, a combination of these two methods can be used.  This requires the data to be partitioned out into multiple groups for which the statistics are calculated.  You will need to provide the number of groups you would like to evaluate.  5-10 groups are common.  This is called k-fold cross validation.  
+
+```{r}
+train.control <- trainControl(method = "cv", number = 5)
+
+# Train the model
+kfoldCV.model <- train(Volln ~ DBHln + HTln, 
+                       data = AllTree1,
+                       method = "lm",
+                       trControl = train.control)
+
+# Display results
+kfoldCV.model
+```
+
+#Bootstrapping+
+
+
+```{r}
+bootlm<-lm.boot(TransModel, R=1000)
+summary(bootlm)
+```
